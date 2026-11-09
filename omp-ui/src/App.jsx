@@ -1,122 +1,90 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 
+import { ROLES } from './auth_and_user/utils/roles.js';
+import { AuthProvider } from './auth_and_user/context/AuthContext.jsx';
+import ProtectedRoute from './auth_and_user/components/ProtectedRoute.jsx';
+import AuthNav from './auth_and_user/components/AuthNav.jsx';
+import CustomerLogin from './auth_and_user/pages/CustomerLogin.jsx';
+import CustomerRegister from './auth_and_user/pages/CustomerRegister.jsx';
+import SellerLogin from './auth_and_user/pages/SellerLogin.jsx';
+import SellerRegister from './auth_and_user/pages/SellerRegister.jsx';
+import AdminLogin from './auth_and_user/pages/AdminLogin.jsx';
+import ForgotPassword from './auth_and_user/pages/ForgotPassword.jsx';
+import ResetPassword from './auth_and_user/pages/ResetPassword.jsx';
+import ProfilePage from './auth_and_user/pages/ProfilePage.jsx';
+import SellerDashboard from './auth_and_user/pages/SellerDashboard.jsx';
+import AdminDashboard from './auth_and_user/pages/AdminDashboard.jsx';
+import Home from './pages/Home.jsx';
+import NotFound from './pages/NotFound.jsx';
+
+// Route protection happens in TWO independent places and both are required:
+//   1. <ProtectedRoute> below  -> user experience (no dead-end screens).
+//   2. the backend middleware  -> the actual security boundary.
+// Client-side checks can always be bypassed with devtools, so they are never
+// treated as authorization.
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <AuthProvider>
+      <BrowserRouter>
+        <AuthNav />
+        <Routes>
+          {/* Existing marketplace entry point (starter content preserved) */}
+          <Route path="/" element={<Home />} />
 
-      <div className="ticks"></div>
+          {/* Customer */}
+          <Route path="/login" element={<CustomerLogin />} />
+          <Route path="/register" element={<CustomerRegister />} />
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          {/* Seller */}
+          <Route path="/seller/login" element={<SellerLogin />} />
+          <Route path="/seller/register" element={<SellerRegister />} />
+          <Route
+            path="/seller/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.SELLER]}>
+                <SellerDashboard />
+              </ProtectedRoute>
+            }
+          />
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+          {/* Admin - sign in only. There is deliberately NO admin register
+              route: admin accounts are created in PostgreSQL by the developer. */}
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <ProtectedRoute allowedRoles={[ROLES.ADMIN]}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Shared */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          {/* The link from the reset email lands here with ?token=... .
+              /forgot-password?token=... is handled too (see ForgotPassword). */}
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute
+                allowedRoles={[ROLES.CUSTOMER, ROLES.SELLER, ROLES.ADMIN]}
+              >
+                <ProfilePage />
+              </ProtectedRoute>
+            }
+          />
+
+          {/* Convenience aliases */}
+          <Route path="/admin" element={<Navigate to="/admin/login" replace />} />
+          <Route path="/seller" element={<Navigate to="/seller/login" replace />} />
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
+
